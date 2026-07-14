@@ -1,0 +1,39 @@
+name: Flutter Job Scraper
+
+on:
+  schedule:
+    # Runs every 4 hours = 6 times a day, fully free on GitHub Actions
+    - cron: "0 */4 * * *"
+  workflow_dispatch: {}   # lets you also trigger it manually from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scraper
+        run: python scraper.py
+
+      - name: Draft application emails for new jobs
+        run: python draft_applications.py
+
+      - name: Commit and push if changed
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add jobs.csv seen_jobs.json drafts/ drafted_seen.json apply_via_platform.csv
+          git diff --quiet --cached || git commit -m "Update job listings and draft applications [automated]"
+          git push
